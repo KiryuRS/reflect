@@ -9,7 +9,7 @@ BUILD_DIR="$APP_DATA_DIR/build"
 build() {
     local CONFIG="RelWithDebInfo"
 
-    conan install . --build=missing --output-folder=$BUILD_DIR --settings=build_type=$CONFIG
+    conan install . --build=missing --output-folder=$BUILD_DIR --settings=build_type=$CONFIG --settings=compiler.cppstd=gnu26
     local CONAN_CMAKE_TOOLCHAIN=$BUILD_DIR/build/$CONFIG/generators/conan_toolchain.cmake
 
     pushd $BUILD_DIR > /dev/null
