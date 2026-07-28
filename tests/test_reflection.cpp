@@ -1,8 +1,13 @@
 #include "../include/reflect/reflect.hpp"
 
-#include <sstream>
-
 #include <gtest/gtest.h>
+
+#include <array>
+#include <optional>
+#include <sstream>
+#include <string_view>
+#include <unordered_set>
+#include <vector>
 
 namespace mocks {
 
@@ -13,7 +18,7 @@ struct no_trait
     char z;
 };
 
-struct [[=krrs::reflect::trait]] with_traits
+struct[[= krrs::reflect::trait]] with_traits
 {
     int id;
     const char* name;
@@ -27,7 +32,7 @@ enum class enum_no_trait
     BAR,
 };
 
-enum class [[=krrs::reflect::trait]] enum_with_traits
+enum class[[= krrs::reflect::trait]] enum_with_traits
 {
     NONE = 0,
     PRICE_NO_DELAY,
@@ -105,6 +110,23 @@ TEST(test_reflection, test_format)
         mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
         EXPECT_EQ(std::format("{}", e), "PRICE_MINS_15_DELAY");
     }
+}
+
+TEST(test_type_traits, test_instance_of)
+{
+    // basic tests
+    static_assert(krrs::reflect::instance_of<std::vector<int>, ^^std::vector>);
+    static_assert(!krrs::reflect::instance_of<std::vector<char>, ^^std::unordered_set>);
+    static_assert(!krrs::reflect::instance_of<std::vector<short>, ^^std::array>);
+    static_assert(krrs::reflect::instance_of<std::array<long, 10>, ^^std::array>);
+
+    // aliasing test
+    using my_vector = std::vector<double>;
+    static_assert(krrs::reflect::instance_of<my_vector, ^^std::vector>);
+    static_assert(krrs::reflect::instance_of<std::string_view, ^^std::basic_string_view>);
+
+    // non class template
+    static_assert(!krrs::reflect::instance_of<int, ^^std::optional>);
 }
 
 } // namespace tests

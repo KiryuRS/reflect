@@ -3,12 +3,12 @@
 
 #pragma once
 
+#include "type_traits.hpp"
+
 #include <algorithm>
 #include <format>
-#include <meta>
 #include <sstream>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 
 namespace krrs::reflect {
@@ -17,7 +17,9 @@ namespace detail {
 
 // for annotating a struct. e.g.
 // struct [[=krrs::reflect::trait]] my_type { ... };
-struct reflect_tag { };
+struct reflect_tag
+{
+};
 
 } // namespace detail
 
@@ -28,9 +30,7 @@ namespace concepts {
 template <typename T>
 concept has_reflect_tag = [] {
     constexpr auto all_annotations = std::define_static_array(std::meta::annotations_of(^^T));
-    return std::ranges::any_of(all_annotations, [] (std::meta::info meta) {
-        return std::meta::type_of(meta) == std::meta::type_of(^^trait);
-    });
+    return std::ranges::any_of(all_annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(^^trait); });
 }();
 
 template <typename T>
@@ -47,16 +47,33 @@ concept reflectable = requires {
     std::is_aggregate_v<T>;
 };
 
+template <typename T>
+concept krrs_reflectable = reflectable<T> && has_reflect_tag<T>;
+
 } // namespace concepts
+
+template <concepts::reflectable T>
+consteval auto generate_nonstatic_member_metas()
+{
+    return std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+}
+
+template <concepts::enumerable T>
+consteval auto generate_enumerator_metas()
+{
+    return std::define_static_array(std::meta::enumerators_of(^^T));
+}
 
 template <concepts::enumerable T>
 inline constexpr std::string_view enum_to_string(T e)
 {
-    static constexpr auto enum_metas = std::define_static_array(std::meta::enumerators_of(^^T));
+    static constexpr auto enum_metas = generate_enumerator_metas<T>();
     template for (constexpr auto meta : enum_metas)
     {
         if ([:meta:] == e)
+        {
             return std::meta::identifier_of(meta);
+        }
     }
     return "UNKNOWN";
 }
@@ -64,11 +81,13 @@ inline constexpr std::string_view enum_to_string(T e)
 template <concepts::enumerable T>
 inline constexpr T string_to_enum(std::string_view str)
 {
-    static constexpr auto enum_metas = std::define_static_array(std::meta::enumerators_of(^^T));
+    static constexpr auto enum_metas = generate_enumerator_metas<T>();
     template for (constexpr auto meta : enum_metas)
     {
         if (std::meta::identifier_of(meta) == str)
+        {
             return [:meta:];
+        }
     }
     return T::NONE;
 }
@@ -82,7 +101,7 @@ inline constexpr std::string to_string(const T& object)
     }
     else if constexpr (::krrs::reflect::concepts::reflectable<T>)
     {
-        static constexpr auto all_nsdms = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto all_nsdms = generate_nonstatic_member_metas<T>();
 
         const char* delimiter = "";
         std::ostringstream oss;
@@ -104,8 +123,7 @@ inline constexpr std::string to_string(const T& object)
 } // namespace krrs::reflect
 
 template <typename T>
-    requires ::krrs::reflect::concepts::has_reflect_tag<T>
-          && ::krrs::reflect::concepts::enumerable<T>
+    requires ::krrs::reflect::concepts::has_reflect_tag<T> && ::krrs::reflect::concepts::enumerable<T>
 std::ostream& operator<<(std::ostream& os, T e)
 {
     return os << ::krrs::reflect::enum_to_string(e);
@@ -114,9 +132,7 @@ std::ostream& operator<<(std::ostream& os, T e)
 // this needs more "constraints" than the previous because function overloads resolution
 // depends on the number of constraints
 template <typename T>
-    requires ::krrs::reflect::concepts::has_reflect_tag<T> &&
-             ::krrs::reflect::concepts::reflectable<T> &&
-             (!::krrs::reflect::concepts::enumerable<T>)
+    requires ::krrs::reflect::concepts::has_reflect_tag<T> && ::krrs::reflect::concepts::reflectable<T> && (!::krrs::reflect::concepts::enumerable<T>)
 std::ostream& operator<<(std::ostream& os, const T& object)
 {
     return os << ::krrs::reflect::to_string(object);
@@ -125,8 +141,7 @@ std::ostream& operator<<(std::ostream& os, const T& object)
 namespace std {
 
 template <typename T>
-    requires ::krrs::reflect::concepts::has_reflect_tag<T>
-          && ::krrs::reflect::concepts::enumerable<T>
+    requires ::krrs::reflect::concepts::has_reflect_tag<T> && ::krrs::reflect::concepts::enumerable<T>
 struct formatter<T> : formatter<string_view>
 {
     auto format(T e, format_context& ctx) const
@@ -136,9 +151,7 @@ struct formatter<T> : formatter<string_view>
 };
 
 template <typename T>
-    requires ::krrs::reflect::concepts::has_reflect_tag<T> &&
-             ::krrs::reflect::concepts::reflectable<T> &&
-             (!::krrs::reflect::concepts::enumerable<T>)
+    requires ::krrs::reflect::concepts::has_reflect_tag<T> && ::krrs::reflect::concepts::reflectable<T> && (!::krrs::reflect::concepts::enumerable<T>)
 struct formatter<T> : formatter<string>
 {
     auto format(const T& object, format_context& ctx) const
