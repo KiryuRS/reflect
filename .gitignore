@@ -5,3 +5,8 @@ settings.local.json
 
 # zed
 .cache/
+
+# clion
+cmake-build-debug/
+conan_provider.cmake
+.idea/
