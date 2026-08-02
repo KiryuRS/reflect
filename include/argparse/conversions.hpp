@@ -128,7 +128,7 @@ struct convert<T>
     static constexpr std::string type_str()
     {
         static constexpr auto tmpl = std::meta::template_of(^^T);
-        return std::format("std::{}<{}, {}>", std::meta::identifier_of(tmpl), convert<value_type>::type_str(), capacity);
+        return std::format("std::{}<{},{}>", std::meta::identifier_of(tmpl), convert<value_type>::type_str(), capacity);
     }
 };
 

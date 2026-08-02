@@ -7,7 +7,7 @@
 
 namespace mocks {
 
-struct[[= krrs::reflect::trait]] simple
+struct[[= krrs::reflect_trait]] simple
 {
     int value;
     std::string_view name;
@@ -16,13 +16,13 @@ struct[[= krrs::reflect::trait]] simple
     double epsilon_value;
 };
 
-struct [[=krrs::reflect::trait]] complex
+struct [[=krrs::reflect_trait]] complex
 {
     std::vector<int> data;
     simple payload;
 };
 
-struct [[=krrs::reflect::trait]] with_opt
+struct [[=krrs::reflect_trait]] with_opt
 {
     std::optional<int> has_value;
     std::optional<int> no_value;

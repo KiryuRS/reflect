@@ -17,7 +17,7 @@ struct no_trait
     char z;
 };
 
-struct [[=krrs::reflect::trait]] with_traits
+struct [[=krrs::reflect_trait]] with_traits
 {
     int id;
     const char* name;
@@ -26,12 +26,12 @@ struct [[=krrs::reflect::trait]] with_traits
     constexpr auto operator<=>(const with_traits&) const noexcept = default;
 };
 
-struct [[=krrs::reflect::trait]] derived : with_traits
+struct [[=krrs::reflect_trait]] derived : with_traits
 {
     std::string trade_id;
 };
 
-struct [[=krrs::reflect::trait]] aliasing : with_traits
+struct [[=krrs::reflect_trait]] aliasing : with_traits
 {
     // no need for any explicit constructors.
     // required because i'm lazy to call the individual members from derived
@@ -49,7 +49,7 @@ enum class enum_no_trait
     BAR,
 };
 
-enum class [[=krrs::reflect::trait]] enum_with_traits
+enum class [[=krrs::reflect_trait]] enum_with_traits
 {
     NONE = 0,
     PRICE_NO_DELAY,

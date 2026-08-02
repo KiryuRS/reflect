@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <meta>
 
-namespace krrs::reflect {
+namespace krrs {
 
 namespace detail {
 
@@ -17,16 +17,16 @@ struct reflect_tag
 } // namespace detail
 
 // for annotating a struct. e.g.
-// struct [[=krrs::reflect::trait]] my_type { ... };
+// struct [[=krrs::reflect_trait]] my_type { ... };
 // not a good place for this variable. but it will do for now ...
-inline constexpr detail::reflect_tag trait{};
+inline constexpr detail::reflect_tag reflect_trait{};
 
-namespace concepts {
+namespace reflect::concepts {
 
 template <typename T>
 concept has_reflect_tag = [] {
     constexpr auto all_annotations = std::define_static_array(std::meta::annotations_of(^^T));
-    return std::ranges::any_of(all_annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(^^trait); });
+    return std::ranges::any_of(all_annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(^^reflect_trait); });
 }();
 
 template <typename T>
@@ -46,6 +46,6 @@ concept reflectable = requires {
 template <typename T>
 concept krrs_reflectable = reflectable<T> && has_reflect_tag<T>;
 
-} // namespace concepts
+} // namespace concepts::reflect
 
-} // namespace krrs::reflect
+} // namespace krrs

@@ -6,18 +6,20 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <source_location>
+
 namespace mocks {
 
-struct [[=krrs::reflect::trait]] option_1
+struct [[=krrs::reflect_trait]] option_1
 {
     int number_of_threads;
-    [[=krrs::argparse::sf_trait]] std::filesystem::path filepath;
+    [[=krrs::shortform_trait]] std::filesystem::path filepath;
     std::string_view consul_url = "http://localhost:8500";
 
     constexpr auto operator<=>(const option_1&) const noexcept = default;
 };
 
-struct [[=krrs::reflect::trait]] option_2
+struct [[=krrs::reflect_trait]] option_2
 {
     int workers = 4;
     short port = 8080;
@@ -26,13 +28,21 @@ struct [[=krrs::reflect::trait]] option_2
     constexpr auto operator<=>(const option_2&) const noexcept = default;
 };
 
-struct [[=krrs::reflect::trait]] option_3
+struct [[=krrs::reflect_trait]] option_3
 {
-    [[=krrs::argparse::sf_trait]] std::vector<int> data_points;
-    [[=krrs::argparse::sf_trait]] std::unordered_set<std::string> metric_names;
+    [[=krrs::shortform_trait]] std::vector<int> data_points;
+    [[=krrs::shortform_trait]] std::unordered_set<std::string> metric_names;
     std::array<double, 10> buckets;
 
     constexpr auto operator<=>(const option_3&) const noexcept = default;
+};
+
+struct [[=krrs::reflect_trait]] option_4
+{
+    std::filesystem::path log_path;
+    bool stdout;
+    std::string symlink;
+    std::array<uint8_t, 2> roll_time;
 };
 
 } // namespace mocks
@@ -41,29 +51,54 @@ namespace tests {
 
 using namespace ::testing;
 
-TEST(test_argparse, test_parse_simple)
+TEST(test_argparse, test_simple)
 {
-    // consul_url should be default value - parse_args should succeed
-    {
-        const char* argv[] = {"dummy_exe", "--number_of_threads", "8", "-f", "/opt/gcc/15"};
+    const auto expect_parse_success = [] <std::size_t N> (const char* (&argv)[N], const auto& expected) {
+        using type = std::remove_cvref_t<decltype(expected)>;
 
-        const auto result = krrs::argparse::parse_args<mocks::option_1>(std::ranges::size(argv), argv);
+        const auto result = krrs::argparse::parse_args<type>(std::ranges::size(argv), argv);
         ASSERT_TRUE(result.has_value()) << "unexpected parsing error!";
-
-        const mocks::option_1 expected{.number_of_threads = 8, .filepath = "/opt/gcc/15", .consul_url = "http://localhost:8500"};
         EXPECT_EQ(result.value(), expected);
-    }
+    };
 
-    // all have default value - parse_args should succeed
-    {
-        const char* argv[] = {"dummy_exe"};
+    // consul_url should be default value
+    const char* argv_1[] = {"dummy_exe", "--number_of_threads", "8", "-f", "/opt/gcc/15"};
+    const mocks::option_1 expected_1{.number_of_threads = 8, .filepath = "/opt/gcc/15", .consul_url = "http://localhost:8500"};
+    expect_parse_success(argv_1, expected_1);
 
-        const auto result = krrs::argparse::parse_args<mocks::option_2>(std::ranges::size(argv), argv);
-        ASSERT_TRUE(result.has_value()) << "unexpected parsing error!";
+    // all have default value
+    const char* argv_2[] = {"dummy_exe"};
+    const mocks::option_2 expected_2{.workers = 4, .port = 8080, .epsilon_value = 1e-5};
+    expect_parse_success(argv_2, expected_2);
+}
 
-        const mocks::option_2 expected{.workers = 4, .port = 8080, .epsilon_value = 1e-5};
-        EXPECT_EQ(result.value(), expected);
-    }
+TEST(test_argparse, test_failure_scenarios)
+{
+    const auto expect_parse_exception = [] <typename T, std::size_t N> (const char* (&argv)[N],
+                                                                        std::string_view expected_str,
+                                                                        std::source_location where = std::source_location::current()) {
+        const std::string line_loc = std::format("{}:{}", where.file_name(), where.line());
+        bool has_exception = false;
+        try
+        {
+            auto _ = krrs::argparse::parse_args<T>(std::ranges::size(argv), argv);
+        }
+        catch (const std::invalid_argument& e)
+        {
+            has_exception = true;
+            const std::string e_str{e.what()};
+            EXPECT_EQ(expected_str, e_str) << std::format("Failed at: {}", line_loc);
+        }
+        EXPECT_TRUE(has_exception) << std::format("Failed at: {}", line_loc);
+    };
+
+    // should have all arguments reported as missing
+    const char* argv_1[] = {"dummy_exe"};
+    expect_parse_exception.template operator()<mocks::option_4>(argv_1, R"([argparse] missing required arguments: ["log_path", "stdout", "symlink", "roll_time"])");
+
+    // roll_time should have an error
+    const char* argv_2[] = {"dummy_exe", "--log_path", "/somewhere/over", "--stdout", "True", "--symlink", "road-to-nowhere", "--roll_time", "1,2,3,4"};
+    expect_parse_exception.template operator()<mocks::option_4>(argv_2, R"([argparse] 1,2,3,4 cannot fit into std::array<unsigned char,2>)");
 }
 
 TEST(test_argparse, test_with_containers)
@@ -80,6 +115,7 @@ TEST(test_argparse, test_with_containers)
     EXPECT_THAT(actual.buckets, expected.buckets);
 }
 
+// can't decide on how to test the output of help - for now to print in std::cout and manual verify
 TEST(test_argparse, test_help)
 {
     const char* argv[] = {"dummy_exe", "--help"};

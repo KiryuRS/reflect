@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "concepts.hpp"
 #include "conversions.hpp"
 
 #include <expected>
@@ -13,55 +14,14 @@ namespace krrs::argparse {
 
 namespace detail {
 
-struct short_tag
-{
-};
-
-// limitation to only allow specific types for parsing
-template <typename T>
-consteval bool validate_option_types()
-{
-    static constexpr auto members = reflect::generate_nonstatic_member_metas<T>();
-    std::array<bool, std::ranges::size(members)> valid_options;
-    int i = 0;
-
-    template for (constexpr auto member : members)
-    {
-        constexpr auto type_info = std::meta::type_of(member);
-        using type = [:type_info:];
-        const bool supported_types =
-            std::integral<type> || std::floating_point<type> // built-in types
-            || std::same_as<type, std::string> || std::same_as<type, std::string_view> // string types
-            || std::same_as<type, std::filesystem::path> // filesystem::path type
-            || reflect::instance_of<type, ^^std::vector> || reflect::instance_of<type, ^^std::unordered_set> || reflect::instance_of<type, ^^std::set> // homogeneous dynamic-sized container types
-            || reflect::instance_of<type, ^^std::array> // homogeneous fixed-sized container type
-        ;
-        valid_options[i++] = supported_types;
-    }
-    return std::ranges::all_of(valid_options, std::identity{});
-}
-
-template <typename T>
-concept type_parsable = requires {
-    validate_option_types<T>();
-    requires reflect::concepts::krrs_reflectable<T>;
-};
-
-template <std::meta::info Meta, std::meta::info Trait>
-consteval bool has_annotated_trait()
-{
-    static constexpr auto annotations = std::define_static_array(std::meta::annotations_of(Meta));
-    return std::ranges::any_of(annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(Trait); });
-}
-
-inline auto generate_arguments(int argc, const char* argv[])
+inline auto generate_arguments(std::integral auto argc, const char* argv[])
 {
     using namespace std::string_view_literals;
 
     // okay to be std::string_view because cmd arguments are already stored in memory
     using arguments_type = std::unordered_map<std::string_view, std::optional<std::string_view>>;
     arguments_type map;
-    for (int i = 1; i < argc; i += 2)
+    for (decltype(argc) i = 1; i < argc; i += 2)
     {
         auto key_view = std::string_view{argv[i]} | std::views::drop_while([](char c) { return c == '-'; });
         const std::string_view key{key_view};
@@ -91,11 +51,10 @@ template <typename T>
 std::vector<std::string> generate_argument_helpers()
 {
     const auto print_key_option = []<std::meta::info Member>() -> std::string {
-        static constexpr short_tag sf_trait{};
         constexpr auto name = std::meta::identifier_of(Member);
 
         std::string str;
-        if constexpr (has_annotated_trait<Member, ^^sf_trait>())
+        if constexpr (concepts::shortform_trait<Member>)
         {
             str += std::format("-{}, ", name.substr(0, 1));
         }
@@ -127,11 +86,8 @@ std::vector<std::string> generate_argument_helpers()
 
 } // namespace detail
 
-// short-form trait. e.g. [[=krrs::argparse::sf_trait]]
-inline constexpr detail::short_tag sf_trait{};
-
-template <detail::type_parsable T>
-constexpr std::expected<T, std::string> parse_args(int argc, const char* argv[])
+template <concepts::type_parsable T>
+constexpr std::expected<T, std::string> parse_args(std::integral auto argc, const char* argv[])
 {
     using namespace std::string_view_literals;
     static constexpr auto members = reflect::generate_nonstatic_member_metas<T>();
@@ -156,11 +112,14 @@ constexpr std::expected<T, std::string> parse_args(int argc, const char* argv[])
     T parsed{};
     template for (constexpr auto member : members)
     {
-        constexpr auto name = detail::has_annotated_trait<member, ^^sf_trait>()
+        constexpr auto name = concepts::shortform_trait<member>
             ? std::meta::identifier_of(member).substr(0, 1)
             : std::meta::identifier_of(member);
         using type = [:std::meta::type_of(member):];
 
+        // reject parsing if:
+        // 1. argument name not found and has no default initializer
+        // 2. argument name found, but no matching "value" (e.g. --number_of_threads --filepath "/opt/gcc/15")
         if (!arguments.contains(name))
         {
             if constexpr (!std::meta::has_default_member_initializer(member))

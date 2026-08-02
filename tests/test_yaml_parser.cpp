@@ -19,7 +19,7 @@ enum class region
 };
 
 // no default values
-struct [[=krrs::reflect::trait]] config_1
+struct [[=krrs::reflect_trait]] config_1
 {
     std::string hostname;
     int port;
@@ -29,7 +29,7 @@ struct [[=krrs::reflect::trait]] config_1
 };
 
 // have default values
-struct [[=krrs::reflect::trait]] config_2
+struct [[=krrs::reflect_trait]] config_2
 {
     std::vector<double> override_prices = {};
     std::string application_name = "default-hello-world";
