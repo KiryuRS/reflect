@@ -6,6 +6,7 @@
 #include "../reflect/reflect.hpp"
 
 #include <filesystem>
+#include <ranges>
 #include <set>
 #include <unordered_set>
 
@@ -118,6 +119,7 @@ struct convert<T>
         {
             throw std::invalid_argument(std::format("[argparse] {} cannot fit into {}", arg, type_str()));
         }
+
         T obj{};
         std::ranges::copy(unbounded, obj.begin());
         return obj;

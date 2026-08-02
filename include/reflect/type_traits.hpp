@@ -1,3 +1,6 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #include <meta>
 #include <type_traits>
 
@@ -32,6 +35,12 @@ consteval bool is_instance_of()
 
 } // namespace detail
 
+// answers the question to: "Is the type a template class type? e.g. is T an std::array? or std::vector? or std::unordered_map?"
+//
+// do not require for user to supply the template arguments / parameters.
+// instance_of<T, ^^std::vector>, returns true if T is some form of std::vector (e.g. std::vector<double>, std::vector<std::vector<int>>)
+//
+// see "test_instance_of" in test_reflection.cpp for more examples
 template <typename T, std::meta::info TmplArg>
 concept instance_of = detail::is_instance_of<^^T, TmplArg>();
 

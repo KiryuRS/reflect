@@ -133,6 +133,7 @@ TEST(test_type_traits, test_instance_of)
 {
     // basic tests
     static_assert(krrs::reflect::instance_of<std::vector<int>, ^^std::vector>);
+    static_assert(krrs::reflect::instance_of<std::vector<std::vector<std::vector<std::string> > >, ^^std::vector>);
     static_assert(!krrs::reflect::instance_of<std::vector<char>, ^^std::unordered_set>);
     static_assert(!krrs::reflect::instance_of<std::vector<short>, ^^std::array>);
     static_assert(krrs::reflect::instance_of<std::array<long, 10>, ^^std::array>);
@@ -144,6 +145,9 @@ TEST(test_type_traits, test_instance_of)
 
     // non class template
     static_assert(!krrs::reflect::instance_of<int, ^^std::optional>);
+    static_assert(!krrs::reflect::instance_of<double, ^^std::unordered_set>);
+    static_assert(!krrs::reflect::instance_of<std::size_t, ^^std::array>);
+    static_assert(!krrs::reflect::instance_of<mocks::with_traits, ^^std::optional>);
 }
 
 } // namespace tests
