@@ -3,11 +3,10 @@
 
 #pragma once
 
+#include "enums.hpp"
 #include "type_traits.hpp"
 
-#include <algorithm>
 #include <format>
-#include <source_location>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -15,12 +14,6 @@
 namespace krrs::reflect {
 
 namespace detail {
-
-// for annotating a struct. e.g.
-// struct [[=krrs::reflect::trait]] my_type { ... };
-struct reflect_tag
-{
-};
 
 // this includes bases of T
 template <typename T>
@@ -37,35 +30,6 @@ consteval std::size_t total_members_count()
 }
 
 } // namespace detail
-
-inline constexpr detail::reflect_tag trait{};
-
-namespace concepts {
-
-template <typename T>
-concept has_reflect_tag = [] {
-    constexpr auto all_annotations = std::define_static_array(std::meta::annotations_of(^^T));
-    return std::ranges::any_of(all_annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(^^trait); });
-}();
-
-template <typename T>
-concept enumerable = requires {
-    std::is_enum_v<T>;
-    std::meta::is_enumerator(^^T);
-    { T::NONE } -> std::same_as<T>;
-};
-
-template <typename T>
-concept reflectable = requires {
-    std::is_class_v<T>;
-    !std::is_reflection_v<T>;
-    std::is_aggregate_v<T>;
-};
-
-template <typename T>
-concept krrs_reflectable = reflectable<T> && has_reflect_tag<T>;
-
-} // namespace concepts
 
 template <concepts::reflectable T, bool IncludeBases = true>
 consteval auto generate_nonstatic_member_metas()
@@ -91,40 +55,6 @@ consteval auto generate_nonstatic_member_metas()
     {
         return self_members;
     }
-}
-
-template <concepts::enumerable T>
-consteval auto generate_enumerator_metas()
-{
-    return std::define_static_array(std::meta::enumerators_of(^^T));
-}
-
-template <concepts::enumerable T>
-inline constexpr std::string_view enum_to_string(T e)
-{
-    static constexpr auto enum_metas = generate_enumerator_metas<T>();
-    template for (constexpr auto meta : enum_metas)
-    {
-        if ([:meta:] == e)
-        {
-            return std::meta::identifier_of(meta);
-        }
-    }
-    return "UNKNOWN";
-}
-
-template <concepts::enumerable T>
-inline constexpr T string_to_enum(std::string_view str)
-{
-    static constexpr auto enum_metas = generate_enumerator_metas<T>();
-    template for (constexpr auto meta : enum_metas)
-    {
-        if (std::meta::identifier_of(meta) == str)
-        {
-            return [:meta:];
-        }
-    }
-    return T::NONE;
 }
 
 template <concepts::has_reflect_tag T>
