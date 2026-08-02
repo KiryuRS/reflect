@@ -1,26 +1,63 @@
-#packages
+# packages
 
-enable_testing() find_package(GTest REQUIRED) find_package(yaml - cpp REQUIRED)
 
-    function(add_unit_test TEST_FILENAME_WITHOUT_CPP) add_executable(${TEST_FILENAME_WITHOUT_CPP} ${TEST_FILENAME_WITHOUT_CPP}.cpp)
+enable_testing()
+find_package(GTest REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
-        set_target_properties(${TEST_FILENAME_WITHOUT_CPP} PROPERTIES CXX_STANDARD_REQUIRED ON CXX_STANDARD 26 CXX_EXTENSIONS ON LINKER_LANGUAGE CXX)
+function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
+    add_executable(${TEST_FILENAME_WITHOUT_CPP} ${TEST_FILENAME_WITHOUT_CPP}.cpp)
 
-#compiler flags
-            target_compile_options(${TEST_FILENAME_WITHOUT_CPP} PRIVATE - Wall - Wextra - Werror - Wcast - align - Wcast - qual - Wuninitialized - Wmissing
-                                       - include - dirs - Wuseless - cast - Wstring - compare - Wconversion
+    set_target_properties(${TEST_FILENAME_WITHOUT_CPP}
+        PROPERTIES
+            CXX_STANDARD_REQUIRED       ON
+            CXX_STANDARD                26
+            CXX_EXTENSIONS              ON
+            LINKER_LANGUAGE             CXX
+    )
 
-                                       - fexceptions - fstrict - aliasing - fdiagnostics - color
-                                   = always - fconcepts - diagnostics - depth = 5 - freflection)
+    # compiler flags
+    target_compile_options(${TEST_FILENAME_WITHOUT_CPP}
+        PRIVATE
+            -Wall
+            -Wextra
+            -Werror
+            -Wcast-align
+            -Wcast-qual
+            -Wuninitialized
+            -Wmissing-include-dirs
+            -Wuseless-cast
+            -Wstring-compare
+            -Wconversion
 
-#optimization flags
-                target_compile_options(${
-                    TEST_FILENAME_WITHOUT_CPP} PRIVATE $<$<CONFIG : Debug> : -O0 - ggdb> $<$<CONFIG : Release> : -O3> $<$<CONFIG : RelWithDebInfo> : -O2 - g>)
+            -fexceptions
+            -fstrict-aliasing
+            -fdiagnostics-color=always
+            -fconcepts-diagnostics-depth=5
+            -freflection
+    )
 
-                    target_link_libraries(${TEST_FILENAME_WITHOUT_CPP} PRIVATE yaml - cpp GTest::gtest GTest::gtest_main pthread
-                                          - l : libgmock.a #TODO : Resolve without specifying this library)
+        # optimization flags
+    target_compile_options(${TEST_FILENAME_WITHOUT_CPP}
+        PRIVATE
+            $<$<CONFIG:Debug>:-O0 -ggdb>
+            $<$<CONFIG:Release>:-O3>
+            $<$<CONFIG:RelWithDebInfo>:-O2 -g>
+    )
 
-                        add_test($ { TEST_FILENAME_WITHOUT_CPP } "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_FILENAME_WITHOUT_CPP}") endfunction()
+    target_link_libraries(${TEST_FILENAME_WITHOUT_CPP}
+        PRIVATE
+            yaml-cpp
+            GTest::gtest
+            GTest::gtest_main
+            pthread
+            -l:libgmock.a # TODO: Resolve without specifying this library
+    )
 
-#add_unit_test(test_argparse)
-                            add_unit_test(test_json_parser) add_unit_test(test_reflection) add_unit_test(test_yaml_parser)
+    add_test(${TEST_FILENAME_WITHOUT_CPP} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_FILENAME_WITHOUT_CPP}")
+endfunction()
+
+add_unit_test(test_argparse)
+add_unit_test(test_json_parser)
+add_unit_test(test_reflection)
+add_unit_test(test_yaml_parser)

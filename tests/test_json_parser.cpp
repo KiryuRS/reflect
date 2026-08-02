@@ -13,13 +13,13 @@ struct[[= krrs::reflect::trait]] simple
     double epsilon_value;
 };
 
-struct[[= krrs::reflect::trait]] complex
+struct [[=krrs::reflect::trait]] complex
 {
     std::vector<int> data;
     simple payload;
 };
 
-struct[[= krrs::reflect::trait]] with_opt
+struct [[=krrs::reflect::trait]] with_opt
 {
     std::optional<int> has_value;
     std::optional<int> no_value;

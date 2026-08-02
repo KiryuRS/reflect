@@ -18,11 +18,18 @@ struct no_trait
     char z;
 };
 
-struct[[= krrs::reflect::trait]] with_traits
+struct [[=krrs::reflect::trait]] with_traits
 {
     int id;
     const char* name;
     double price;
+
+    constexpr auto operator<=>(const with_traits&) const noexcept = default;
+};
+
+struct [[=krrs::reflect::trait]] derived : with_traits
+{
+    std::string trade_id;
 };
 
 enum class enum_no_trait
@@ -32,7 +39,7 @@ enum class enum_no_trait
     BAR,
 };
 
-enum class[[= krrs::reflect::trait]] enum_with_traits
+enum class [[=krrs::reflect::trait]] enum_with_traits
 {
     NONE = 0,
     PRICE_NO_DELAY,
@@ -48,9 +55,9 @@ using namespace ::testing;
 
 TEST(test_reflection, test_concepts)
 {
-    static constexpr auto with_traits = {^^mocks::with_traits, ^^mocks::enum_with_traits};
+    static constexpr auto with_traits = {^^mocks::with_traits, ^^mocks::enum_with_traits, ^^mocks::derived};
     static constexpr auto no_traits = {^^mocks::no_trait, ^^mocks::enum_no_trait};
-    static constexpr auto classes = {^^mocks::no_trait, ^^mocks::with_traits};
+    static constexpr auto classes = {^^mocks::no_trait, ^^mocks::with_traits, ^^mocks::derived};
     static constexpr auto enums = {^^mocks::enum_no_trait, ^^mocks::enum_with_traits};
 
     // no reflect traits
@@ -96,6 +103,13 @@ TEST(test_reflection, test_ostream)
         std::ostringstream oss;
         oss << e;
         EXPECT_EQ(oss.str(), "PRICE_MINS_15_DELAY");
+    }
+
+    {
+        mocks::derived object{{102, "TSLA.OQ", 0.000145}, "invalid"};
+        std::ostringstream oss;
+        oss << object;
+        EXPECT_EQ(oss.str(), "derived{id: 102, name: TSLA.OQ, price: 0.000145, trade_id: invalid}");
     }
 }
 
