@@ -1,13 +1,12 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #include "../include/reflect/reflect.hpp"
 
 #include <gtest/gtest.h>
 
-#include <array>
-#include <optional>
 #include <sstream>
-#include <string_view>
 #include <unordered_set>
-#include <vector>
 
 namespace mocks {
 
@@ -30,6 +29,17 @@ struct [[=krrs::reflect::trait]] with_traits
 struct [[=krrs::reflect::trait]] derived : with_traits
 {
     std::string trade_id;
+};
+
+struct [[=krrs::reflect::trait]] aliasing : with_traits
+{
+    // no need for any explicit constructors.
+    // required because i'm lazy to call the individual members from derived
+    aliasing() = default;
+    explicit aliasing(const derived& value)
+        : with_traits{value}
+    {
+    }
 };
 
 enum class enum_no_trait
@@ -55,9 +65,9 @@ using namespace ::testing;
 
 TEST(test_reflection, test_concepts)
 {
-    static constexpr auto with_traits = {^^mocks::with_traits, ^^mocks::enum_with_traits, ^^mocks::derived};
+    static constexpr auto with_traits = {^^mocks::with_traits, ^^mocks::enum_with_traits, ^^mocks::derived, ^^mocks::aliasing};
     static constexpr auto no_traits = {^^mocks::no_trait, ^^mocks::enum_no_trait};
-    static constexpr auto classes = {^^mocks::no_trait, ^^mocks::with_traits, ^^mocks::derived};
+    static constexpr auto classes = {^^mocks::no_trait, ^^mocks::with_traits, ^^mocks::derived, ^^mocks::aliasing};
     static constexpr auto enums = {^^mocks::enum_no_trait, ^^mocks::enum_with_traits};
 
     // no reflect traits
@@ -91,39 +101,32 @@ TEST(test_reflection, test_concepts)
 
 TEST(test_reflection, test_ostream)
 {
-    {
-        constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
+    const auto expect_same_printable = [] (const auto& object, std::string_view expected_str) {
         std::ostringstream oss;
         oss << object;
-        EXPECT_EQ(oss.str(), "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
-    }
+        EXPECT_EQ(oss.str(), expected_str);
+    };
 
-    {
-        mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
-        std::ostringstream oss;
-        oss << e;
-        EXPECT_EQ(oss.str(), "PRICE_MINS_15_DELAY");
-    }
+    mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
+    expect_same_printable(e, "PRICE_MINS_15_DELAY");
 
-    {
-        mocks::derived object{{102, "TSLA.OQ", 0.000145}, "invalid"};
-        std::ostringstream oss;
-        oss << object;
-        EXPECT_EQ(oss.str(), "derived{id: 102, name: TSLA.OQ, price: 0.000145, trade_id: invalid}");
-    }
+    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
+    expect_same_printable(object, "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
+
+    const mocks::derived d_object{{102, "TSLA.OQ", 0.000145}, "invalid"};
+    expect_same_printable(d_object, "derived{id: 102, name: TSLA.OQ, price: 0.000145, trade_id: invalid}");
+
+    const mocks::aliasing a_object{d_object};
+    expect_same_printable(a_object, "aliasing{id: 102, name: TSLA.OQ, price: 0.000145}");
 }
 
 TEST(test_reflection, test_format)
 {
-    {
-        constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
-        EXPECT_EQ(std::format("{}", object), "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
-    }
+    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
+    EXPECT_EQ(std::format("{}", object), "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
 
-    {
-        mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
-        EXPECT_EQ(std::format("{}", e), "PRICE_MINS_15_DELAY");
-    }
+    mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
+    EXPECT_EQ(std::format("{}", e), "PRICE_MINS_15_DELAY");
 }
 
 TEST(test_type_traits, test_instance_of)

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "../reflect/reflect.hpp"
@@ -5,8 +8,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include <sstream>
-#include <string_view>
-#include <vector>
 
 namespace YAML {
 

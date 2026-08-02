@@ -1,5 +1,5 @@
-# packages
-
+# Copyright (c) 2026 KiryuRS
+# SPDX-License-Identifier: MIT
 
 enable_testing()
 find_package(GTest REQUIRED)
@@ -37,7 +37,7 @@ function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
             -freflection
     )
 
-        # optimization flags
+    # optimization flags
     target_compile_options(${TEST_FILENAME_WITHOUT_CPP}
         PRIVATE
             $<$<CONFIG:Debug>:-O0 -ggdb>

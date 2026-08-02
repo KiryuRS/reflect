@@ -1,10 +1,12 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #include "../include/yaml/parser.hpp"
 
 #include <gtest/gtest.h>
 
 #include <ranges>
 #include <sstream>
-#include <vector>
 
 namespace mocks {
 

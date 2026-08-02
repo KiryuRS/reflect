@@ -1,13 +1,13 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "../reflect/reflect.hpp"
 
-#include <concepts>
 #include <filesystem>
-#include <ranges>
 #include <set>
 #include <unordered_set>
-#include <vector>
 
 namespace krrs::argparse::internal {
 

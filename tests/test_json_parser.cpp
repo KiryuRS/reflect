@@ -1,3 +1,6 @@
+// Copyright (c) 2026 KiryuRS
+// SPDX-License-Identifier: MIT
+
 #include "../include/json/parser.hpp"
 
 #include <gtest/gtest.h>
