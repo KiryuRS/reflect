@@ -41,7 +41,7 @@ consteval bool is_instance_of()
 // instance_of<T, ^^std::vector>, returns true if T is some form of std::vector (e.g. std::vector<double>, std::vector<std::vector<int>>)
 //
 // see "test_instance_of" in test_reflection.cpp for more examples
-template <typename T, std::meta::info TmplArg>
-concept instance_of = detail::is_instance_of<^^T, TmplArg>();
+template <typename T, std::meta::info TmplArg, typename RawT = std::remove_cvref<T>>
+concept instance_of = detail::is_instance_of<^^RawT, TmplArg>();
 
 } // namespace krrs::reflect
