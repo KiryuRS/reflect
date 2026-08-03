@@ -7,8 +7,7 @@
 
 namespace krrs::yaml {
 
-template <typename T>
-    requires ::krrs::reflect::concepts::krrs_reflectable<T>
+template <::krrs::reflect::concepts::krrs_reflectable T>
 T deserialize(const std::string& str)
 {
     static constexpr std::string_view name = std::meta::identifier_of(^^T);
@@ -16,8 +15,7 @@ T deserialize(const std::string& str)
     return node[name].as<T>();
 }
 
-template <typename T>
-    requires ::krrs::reflect::concepts::krrs_reflectable<T>
+template <::krrs::reflect::concepts::krrs_reflectable T>
 std::string serialize(const T& obj)
 {
     static constexpr std::string_view name = std::meta::identifier_of(^^T);

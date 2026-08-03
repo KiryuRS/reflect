@@ -1,266 +1,220 @@
 # reflect
 
-> [!IMPORTANT]
-> Compile-time reflection with C++23. **Zero overhead and runtime costs**, with helper APIs to iterate through reflected members.  
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)]()
-[![Header only](https://img.shields.io/badge/header--only-yes-brightgreen.svg)]()
+[![C++26](https://img.shields.io/badge/C%2B%2B-26-blue.svg)]()
+[![Header driven](https://img.shields.io/badge/header--driven-yes-brightgreen.svg)]()
 
-Only require a single annotation to a struct with a single macro (`REFLECT` or `REFLECT_PRINTABLE`).
-
-Try it live:  
-→ [Compiler Explorer (GCC 15, -std=c++23 -O3)](https://godbolt.org/z/PnchhnbYE)  
-→ [Compiler Explorer (`template for`) (GCC 16.1, -std=c++2c -O3)](https://godbolt.org/z/G1WsPxbbv)  
-→ [Compiler Explorer (`object_collector`) (GCC 16.1 -std=c++2c -O3)](https://godbolt.org/z/bWqc7hd7r)
-
----
+## Usage
 
 ```cpp
-struct position_info
-{
-    double bod_position;
-    double position;
-    double buy_quantity;
-    double sell_quantity;
+#include "reflect/reflect.hpp"
 
-    REFLECT_PRINTABLE(position_info, (), (bod_position, position, buy_quantity, sell_quantity));
+struct [[=krrs::reflect_trait]] point
+{
+    int x;
+    int y;
 };
 
-constexpr position_info pos{1.0, 3.0, 4.0, 2.0};
+constexpr point p{3, 4};
 
-// iterate all members at compile time
-krrs::reflect::for_each<position_info>([&pos] <typename D>() {
-    std::cout << D::name << ": " << krrs::reflect::get_member_variable<D>(pos) << "\n";
-});
-
-std::cout << pos;               // operator<< out of the box
-std::format("{}", pos);         // std::formatter out of the box
+std::cout << p;          // point{x: 3, y: 4}
+std::format("{}", p);    // same, through std::formatter
 ```
+
+C++26 makes reflection a built-in language feature. The `[[=krrs::reflect_trait]]` annotation taps
+into it to give the type `operator<<` on `std::ostream` and `std::format` support — for free.
+
+## What it is
+
+A thin, header-driven wrapper over C++26 reflection. Opt a type in with a single annotation, and you
+can print it, format it, and walk its members — without hand-writing any of that.
+
+> [!NOTE]
+> "Header-driven" applies to the core: `reflect`, `json`, and `argparse` are include-only. The
+> `yaml` module is the one exception — it builds on `yaml-cpp`, which you link (e.g. via
+> `FetchContent` or Conan).
 
 ---
 
-## Why reflect?
+## The core: `reflect/`
 
-- **Zero overhead.** All metadata is `static constexpr`. No runtime tables, no virtual dispatch, no heap.
-- **Non-intrusive.** The macro adds only static member functions — `sizeof(T)`, aggregate initialisation, and trivial construction are all preserved.
-- **Works with anything.** Mixed member types, nested structs, enums, containers, `std::optional`, member functions — all reflect cleanly.
-- **Composes naturally.** Works with C++20 concepts, `std::format`, and template metaprogramming out of the box.
-- **Batteries included.** Built-in YAML serialisation and CLI argument parsing, both driven by the same reflection metadata.
-
----
-
-## Installation
-
-Header-only library. Add it as a submodule or use `FetchContent` via cmake.  
-
-No build step required. Dependencies (`yaml-cpp`) are only needed for the optional YAML integration.
-
----
-
-## Core API
-
-### `REFLECT` and `REFLECT_PRINTABLE`
+Tag a struct or enum with `[[=krrs::reflect_trait]]`. The type must be an **aggregate**.
 
 ```cpp
-REFLECT(ClassName, (BaseClasses...), (members...))
-REFLECT_PRINTABLE(ClassName, (BaseClasses...), (members...))
-```
-
-`REFLECT_PRINTABLE` is a superset of `REFLECT` — use it when you want printing for free.
-
-| Feature | `REFLECT` | `REFLECT_PRINTABLE` |
-|---|:---:|:---:|
-| `krrs::reflect::for_each<T>` | ✓ | ✓ |
-| `krrs::reflect::get_member_variable<D>(obj)` | ✓ | ✓ |
-| `krrs::reflect::descriptor_for<T, &T::member>` | ✓ | ✓ |
-| `to_string(obj)` | | ✓ |
-| `operator<<` | | ✓ |
-| `std::formatter<T>` | | ✓ |
-| `print_meta(obj)` | | ✓ |
-
-### `krrs::reflect::for_each<T>`
-
-Iterates all reflected members at compile time. Each visit receives the descriptor as a template type argument:
-
-> [!TIP]
-> From C++26 onwards, it is also achievable through:
-> ```cpp
-> template for (constexpr auto meta : krrs::reflect::generate_meta_info<position_info>())
-> {
->     constexpr auto descriptor = krrs::reflect::get_descriptor<meta>();
->     auto& member_variable = krrs::reflect::get_member_variable(your_obj, descriptor);
->     std::cout << descriptor.name << ": " << member_variable << '\n';
-> }
-
-```cpp
-krrs::reflect::for_each<position_info>([&pos] <typename D>() {
-    std::cout << D::name << ": " << krrs::reflect::get_member_variable<D>(pos) << "\n";
-});
-```
-
-### `krrs::reflect::descriptor_for<T, MemberPtr>`
-
-Reverse-lookup a descriptor from a member pointer — fully resolved at compile time:
-
-```cpp
-using D = krrs::reflect::descriptor_for<position_info, &position_info::position>;
-
-static_assert(D::name == "position");
-static_assert(std::same_as<D::member_type, double>);
-static_assert(D::mem_ptr == &position_info::position);
-```
-
-### Concepts
-
-| Concept | Passes when |
-|---|---|
-| `krrs::reflect::concepts::reflectable<T>` | `T` has `REFLECT` or `REFLECT_PRINTABLE` |
-| `krrs::reflect::concepts::reflect_and_printable<T>` | `T` has `REFLECT_PRINTABLE` |
-| `krrs::reflect::concepts::descriptor_like<D>` | `D` is a valid descriptor type |
-
----
-
-## Inheritance
-
-Pass base classes in the second argument. `for_each` walks base members first, then the derived class's own members.
-
-> Base classes must be reflected before the derived class.
-
-```cpp
-struct base
+struct [[=krrs::reflect_trait]] circle
 {
-    std::string name;
-    double score;
-    REFLECT_PRINTABLE(base, (), (name, score));
+    std::string_view name;
+    double radius;
 };
 
-struct tag
+enum class [[=krrs::reflect_trait]] color
 {
-    bool active;
-    REFLECT_PRINTABLE(tag, (), (active));
+    NONE = 0,
+    red,
+    green,
+    blue,
 };
-
-struct record : base, tag
-{
-    int id;
-    REFLECT_PRINTABLE(record, (base, tag), (id));
-};
-
-// for_each visits: name, score (base), active (tag), id (record)
-std::cout << std::format("{}\n", record{"Alice", 9.5, true, 42});
 ```
 
----
-
-## Member Functions
-
-Member functions can be reflected alongside member variables. Use `REFLECT` (not `REFLECT_PRINTABLE` — streaming a function is ill-formed).
+**Print / format**
 
 ```cpp
-struct entity
-{
-    int id;
-    void update(float dt, int flags);
+constexpr circle c{.name = "unit", .radius = 2.5};
+std::cout << c;                 // circle{name: unit, radius: 2.5}
+std::format("{}", c);           // same
+krrs::reflect::to_string(c);    // same, as std::string
+```
 
-    REFLECT(entity, (), (id, update));
+**Enums** (need a `NONE` sentinel)
+
+```cpp
+static_assert(krrs::reflect::enum_to_string(color::green) == "green");
+static_assert(krrs::reflect::string_to_enum<color>("blue") == color::blue);
+```
+
+Unmatched lookups fall back to `"UNKNOWN"` (by name) and `NONE` (by value).
+
+**Iterate members** — `generate_nonstatic_member_metas<T>()` hands you the member list; drive it
+with `template for` and read each member through the `obj.[:m:]` splice. It all stays `constexpr`:
+
+```cpp
+struct [[=krrs::reflect_trait]] vec3
+{
+    double x;
+    double y;
+    double z;
 };
 
-krrs::reflect::for_each<entity>([&obj] <typename D>() {
-    if constexpr (std::is_function_v<typename D::member_type>)
+// generic over however many members the type declares
+constexpr double dot(const vec3& a, const vec3& b)
+{
+    double sum = 0.0;
+    static constexpr auto members = krrs::reflect::generate_nonstatic_member_metas<vec3>();
+    template for (constexpr auto m : members)
     {
-        using ret  = typename D::introspection_type::return_type;
-        using args = typename D::introspection_type::arguments_type; // typelist<float, int>
-
-        auto fn = krrs::reflect::get_member_variable<D>(obj); // callable bound to obj by reference
-        fn(0.016f, 0);
+        sum += a.[:m:] * b.[:m:];
     }
-});
+    return sum;
+}
+
+static_assert(dot({1, 2, 3}, {4, 5, 6}) == 32.0);
 ```
+
+By default the list **flattens base classes first**, then the derived members; pass
+`generate_nonstatic_member_metas<T, false>()` for the current level only.
 
 ---
 
-## YAML Integration
+## YAML — `yaml/`
 
-Include `yaml/parser.hpp`. Any reflected type is possible to use `krrs::yaml::deserialize` and `krrs::yaml::serialize`. No need for manual mapping.
+Read and write any reflected type as YAML. The type's name is the top-level key; its members are the
+keys nested under it.
 
 ```cpp
 #include "yaml/parser.hpp"
 
-struct server_config
+struct [[=krrs::reflect_trait]] server
 {
     std::string host;
     int port;
-    std::optional<int> timeout_ms;
-    std::vector<std::string> allowed_origins;
-
-    REFLECT(server_config, (), (host, port, timeout_ms, allowed_origins));
+    bool tls = false;   // has a default → optional on decode
 };
 
-server_config cfg = krrs::yaml::deserialize<server_config>(yaml_string);
-YAML::Node out    = krrs::yaml::serialize(cfg);
+const server s{.host = "0.0.0.0", .port = 8080};
+
+const std::string text = krrs::yaml::serialize(s);
+// server:
+//   host: 0.0.0.0
+//   port: 8080
+//   tls: false
+
+const server back = krrs::yaml::deserialize<server>(text);
 ```
 
-`std::optional` fields are skipped on encode if empty, and skipped on decode if the key is absent. Containers behave the same way.
-
----
-
-## CLI Argument Parsing
-
-Include `argparse/argparse.hpp`. Reflect a config struct and hand `argc`/`argv` directly to `parse_args`.
+Fields without a default are required. If any are missing from the YAML, `deserialize` throws and
+names them all:
 
 ```cpp
-#include "argparse/argparse.hpp"
+const std::string incomplete = R"(
+server:
+  host: 0.0.0.0
+)";
 
-struct program_args
+krrs::yaml::deserialize<server>(incomplete);   // port is required but absent
+// throws: [yaml] missing the required keys: ["port"] for server
+```
+
+---
+
+## JSON — `json/`
+
+Serialise any reflected type to a JSON string. Nested reflected structs, containers, and
+`std::optional` encode recursively — `nullopt` becomes `null`.
+
+```cpp
+#include "json/parser.hpp"
+
+struct [[=krrs::reflect_trait]] account
 {
-    std::string config_path;
-    int worker_count;
-    std::optional<int> timeout_ms;
-    std::vector<std::string> plugins;
-
-    REFLECT(program_args, (), (config_path, worker_count, timeout_ms, plugins));
+    int id;
+    std::string_view name;
+    std::array<int, 2> roles;
+    std::optional<int> tier;
 };
 
-// ./app --config_path ./cfg.yaml --worker_count 4 --plugins a,b,c
-auto args = krrs::argparse::parse_args<program_args>(argc, argv);
+constexpr account a{.id = 7, .name = "ada", .roles = {1, 2}, .tier = std::nullopt};
+
+const std::string json = krrs::json::serialize(a);
+// { "id": 7, "name": "ada", "roles": [1, 2], "tier": null }
 ```
 
-Scalar fields are required. `std::optional` and `std::vector` fields are optional (default to empty).
+`json` is serialise-only — there is no deserialisation back into a struct.
 
 ---
 
-## Building & Testing
+## CLI arguments — `argparse/`
 
-```bash
-./conan_build.sh           # install deps via Conan, build with CMake, run test suite
-./conan_build.sh --format  # run clang-format first, then build and test
+Turn a reflected struct into a command-line parser — each field becomes a `--flag`. Like Python's
+`argparse`, without the setup.
+
+```cpp
+#include "argparse/parser.hpp"
+
+struct [[=krrs::reflect_trait]] options
+{
+    std::filesystem::path input;                  // required
+    [[=krrs::shortform_trait]] int threads = 4;   // optional; -t via shortform
+    std::vector<std::string> tags = {};           // optional, comma-separated
+};
+
+int main(int argc, const char* argv[])
+{
+    // ./app --input data.csv -t 8 --tags fast,verbose
+    const auto args = krrs::argparse::parse_args<options>(argc, argv);
+    if (!args)
+    {
+        std::cout << args.error() << '\n';   // --help / -h prints the generated usage here
+        return 0;
+    }
+
+    const options& opts = *args;
+    // opts.input, opts.threads, opts.tags ...
+}
 ```
 
-Or with Docker:
+Fields without a default are required. If any are missing, `parse_args` throws
+`std::invalid_argument` and names them all:
 
-```bash
-docker build -t reflect . && docker run --rm reflect
+```cpp
+const char* argv[] = {"app"};   // no --input
+krrs::argparse::parse_args<options>(1, argv);
+// throws: [argparse] missing required arguments: ["input"]
 ```
-
-**Requirements:** C++23 (GCC ≥ 13, Clang ≥ 16, MSVC ≥ 19.34), CMake ≥ 4.1.0.
 
 ---
 
-## Limitations
-
-- **Manual opt-in** — each type must be annotated. No automatic or non-intrusive reflection.
-- **128-member limit** — the preprocessor loop is unrolled to 128 entries per class.
-- **Member functions require `REFLECT`** — `REFLECT_PRINTABLE` cannot stream function members.
-- **No short CLI flags** — argparse accepts `--name value` only, no `-n` aliases.
-- **Compile times** scale with the number of reflected types.
-
----
+## Building & Testing   _(next — GCC 16.1, `-freflection`, `-std=gnu++26`)_
 
 ## License
 
 MIT © KiryuRS
-
----
-
-<sub>Documentation and unit tests written with the assistance of [Claude](https://claude.ai) (Anthropic).</sub>
