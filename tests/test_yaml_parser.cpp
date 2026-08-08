@@ -38,6 +38,15 @@ struct [[=krrs::reflect_trait]] config_2
     constexpr auto operator<=>(const config_2&) const = default;
 };
 
+// with std::optional
+struct [[=krrs::reflect_trait]] config_3
+{
+    std::optional<int> workers;
+    std::optional<std::filesystem::path> override_path;
+
+    constexpr auto operator<=>(const config_3&) const = default;
+};
+
 } // namespace mocks
 
 namespace tests {
@@ -65,6 +74,17 @@ config_2:
 )";
     const auto obj = krrs::yaml::deserialize<mocks::config_2>(str);
     const mocks::config_2 expected{.override_prices = {3.14, 9.98, 71.994}};
+    EXPECT_EQ(obj, expected);
+}
+
+TEST(test_yaml_parser, test_decode_with_optional)
+{
+    const std::string str = R"(
+config_3:
+    override_path: "/usr/lib/local"
+)";
+    const auto obj = krrs::yaml::deserialize<mocks::config_3>(str);
+    const mocks::config_3 expected{.workers = std::nullopt, .override_path = "/usr/lib/local"};
     EXPECT_EQ(obj, expected);
 }
 

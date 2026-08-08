@@ -7,9 +7,54 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <filesystem>
+#include <optional>
 #include <sstream>
 
 namespace YAML {
+
+template <>
+struct convert<std::filesystem::path>
+{
+    static Node encode(const std::filesystem::path& obj)
+    {
+        Node node{NodeType::Scalar};
+        node = obj.string();
+        return node;
+    }
+
+    static bool decode(const Node& node, std::filesystem::path& obj)
+    {
+        if (!node.IsScalar())
+            return false;
+
+        obj = node.template as<std::string>();
+        return true;
+    }
+};
+
+template <typename T>
+struct convert<std::optional<T>>
+{
+    static Node encode(const std::optional<T>& obj)
+    {
+        Node node{};
+        if (obj.has_value())
+        {
+            node = obj.value();
+        }
+        return node;
+    }
+
+    static bool decode(const Node& node, std::optional<T>& obj)
+    {
+        if (!node.IsDefined())
+            return true;
+
+        obj = node.template as<T>();
+        return true;
+    }
+};
 
 template <typename T>
     requires ::krrs::reflect::concepts::reflectable<T> && ::krrs::reflect::concepts::has_reflect_tag<T>
@@ -49,7 +94,7 @@ struct convert<T>
             using type = [:std::meta::type_of(member):];
 
             // default value represents optional "argument" in yaml
-            if constexpr (std::meta::has_default_member_initializer(member))
+            if constexpr (std::meta::has_default_member_initializer(member) || ::krrs::reflect::instance_of<type, ^^std::optional>)
             {
                 if (!node[name].IsDefined())
                 {
