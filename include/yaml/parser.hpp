@@ -7,15 +7,16 @@
 
 namespace krrs::yaml {
 
-template <::krrs::reflect::concepts::krrs_reflectable T, typename StringT, bool BeginWithIdentifierOfT = true>
-T deserialize(const StringT& str)
+template <::krrs::reflect::concepts::krrs_reflectable T, bool BeginWithIdentifierOfT = true>
+T deserialize(const auto& str)
 {
     constexpr auto load_as_string = [] (const auto& str) {
-        if constexpr (std::same_as<StringT, std::string>)
+        using RawStringT = std::remove_cvref_t<decltype(str)>;
+        if constexpr (std::same_as<RawStringT, std::string>)
         {
             return YAML::Load(str);
         }
-        else if constexpr (std::convertible_to<StringT, std::string>)
+        else if constexpr (std::same_as<RawStringT, std::string_view>)
         {
             return YAML::Load(std::string{str});
         }
