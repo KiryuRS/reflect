@@ -55,7 +55,7 @@ using namespace ::testing;
 
 TEST(test_yaml_parser, test_decode_no_default_values)
 {
-    const std::string str = R"(
+    const std::string_view str = R"(
 config_1:
     hostname: 127.0.0.1
     port: 8080

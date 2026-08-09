@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <optional>
 #include <sstream>
+#include <unordered_set>
 
 namespace YAML {
 
@@ -30,6 +31,29 @@ struct convert<std::filesystem::path>
 
         obj = node.template as<std::string>();
         return true;
+    }
+};
+
+template <typename T>
+struct convert<std::unordered_set<T>>
+{
+    static Node encode(const std::unordered_set<T>& obj)
+    {
+        Node node{NodeType::Sequence};
+        for (const auto& elem : obj)
+            node.push_back(elem);
+        return node;
+    }
+
+    static bool decode(const Node& node, std::unordered_set<T>& obj)
+    {
+        if (!node.IsSequence())
+            return false;
+
+        obj.clear();
+        for (const auto& elem : node)
+            obj.insert(elem.template as<T>());
+        return obj;
     }
 };
 
