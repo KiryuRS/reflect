@@ -53,7 +53,7 @@ struct convert<std::unordered_set<T>>
         obj.clear();
         for (const auto& elem : node)
             obj.insert(elem.template as<T>());
-        return obj;
+        return true;
     }
 };
 

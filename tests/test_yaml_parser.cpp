@@ -7,6 +7,7 @@
 
 #include <ranges>
 #include <sstream>
+#include <unordered_set>
 
 namespace mocks {
 
@@ -24,6 +25,7 @@ struct [[=krrs::reflect_trait]] config_1
     std::string hostname;
     int port;
     mocks::region region;
+    std::unordered_set<std::string> exclusions;
 
     constexpr auto operator<=>(const config_1&) const = default;
 };
@@ -60,9 +62,10 @@ config_1:
     hostname: 127.0.0.1
     port: 8080
     region: APAC
+    exclusions: [A, B, C]
 )";
     const auto obj = krrs::yaml::deserialize<mocks::config_1>(str);
-    const mocks::config_1 expected{.hostname = "127.0.0.1", .port = 8080, .region = mocks::region::APAC};
+    const mocks::config_1 expected{.hostname = "127.0.0.1", .port = 8080, .region = mocks::region::APAC, .exclusions = {"A", "B", "C"}};
     EXPECT_EQ(obj, expected);
 }
 
@@ -106,7 +109,7 @@ TEST(test_yaml_parser, test_decode_has_missing_keys)
     };
     // "empty config"
     const std::string str_1 = R"(config_1:)";
-    expect_throw.template operator()<std::runtime_error>(str_1, R"([yaml] missing the required keys: ["hostname", "port", "region"] for config_1)");
+    expect_throw.template operator()<std::runtime_error>(str_1, R"([yaml] missing the required keys: ["hostname", "port", "region", "exclusions"] for config_1)");
 
     // partial config
     const std::string str_2 = R"(
@@ -114,7 +117,7 @@ config_1:
     hostname: localhost:8080
     port: 80
 )";
-    expect_throw.template operator()<std::runtime_error>(str_2, R"([yaml] missing the required keys: ["region"] for config_1)");
+    expect_throw.template operator()<std::runtime_error>(str_2, R"([yaml] missing the required keys: ["region", "exclusions"] for config_1)");
 }
 
 TEST(test_yaml_parser, test_encode)
@@ -126,7 +129,7 @@ TEST(test_yaml_parser, test_encode)
         return std::string{view.begin(), view.end()};
     };
 
-    const mocks::config_1 obj_1{.hostname = "sgzls1216d", .port = 9000, .region = mocks::region::AMER};
+    const mocks::config_1 obj_1{.hostname = "sgzls1216d", .port = 9000, .region = mocks::region::AMER, .exclusions = {"food", "food", "good", "boot"}};
     const auto str = krrs::yaml::serialize(obj_1);
 
     const auto expected = R"(
@@ -134,6 +137,10 @@ config_1:
   hostname: sgzls1216d
   port: 9000
   region: AMER
+  exclusions:
+    - boot
+    - good
+    - food
 )";
     EXPECT_EQ(str, trim_string(expected));
 }
