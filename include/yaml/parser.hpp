@@ -7,20 +7,49 @@
 
 namespace krrs::yaml {
 
-template <::krrs::reflect::concepts::krrs_reflectable T>
-T deserialize(const std::string& str)
+template <::krrs::reflect::concepts::krrs_reflectable T, typename StringT, bool BeginWithIdentifierOfT = true>
+T deserialize(const StringT& str)
 {
+    constexpr auto load_as_string = [] (const auto& str) {
+        if constexpr (std::same_as<StringT, std::string>)
+        {
+            return YAML::Load(str);
+        }
+        else if constexpr (std::convertible_to<StringT, std::string>)
+        {
+            return YAML::Load(std::string{str});
+        }
+        else
+        {
+            static_assert(requires { std::integral_constant<bool, false>::value; }, "type not supported!");
+        }
+    };
+
     static constexpr std::string_view name = std::meta::identifier_of(^^T);
-    const YAML::Node node = YAML::Load(str);
-    return node[name].as<T>();
+    const YAML::Node node = load_as_string(str);
+    if constexpr (BeginWithIdentifierOfT)
+    {
+        return node[name].as<T>();
+    }
+    else
+    {
+        return node.as<T>();
+    }
 }
 
-template <::krrs::reflect::concepts::krrs_reflectable T>
+template <::krrs::reflect::concepts::krrs_reflectable T, bool BeginWithIdentifierOfT = true>
 std::string serialize(const T& obj)
 {
     static constexpr std::string_view name = std::meta::identifier_of(^^T);
     YAML::Node node;
-    node[name] = obj;
+    if constexpr (BeginWithIdentifierOfT)
+    {
+        node[name] = obj;
+    }
+    else
+    {
+        node = obj;
+    }
 
     std::ostringstream oss;
     oss << node;
