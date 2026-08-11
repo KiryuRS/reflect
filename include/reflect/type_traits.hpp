@@ -1,6 +1,8 @@
 // Copyright (c) 2026 KiryuRS
 // SPDX-License-Identifier: MIT
 
+#pragma once
+
 #include <meta>
 #include <type_traits>
 
