@@ -5,6 +5,7 @@
 
 #include "concepts.hpp"
 #include "conversions.hpp"
+#include "validators.hpp"
 
 #include <expected>
 #include <iomanip>
@@ -144,6 +145,9 @@ constexpr std::expected<T, std::string> parse_args(std::integral auto argc, cons
     {
         throw std::invalid_argument(std::format("[argparse] missing required arguments: {}", missing_options));
     }
+
+    validate_args(parsed);
+
     return parsed;
 }
 

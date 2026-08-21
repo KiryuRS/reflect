@@ -45,6 +45,13 @@ struct [[=krrs::reflect_trait]] option_4
     std::array<uint8_t, 2> roll_time;
 };
 
+// with strict validations
+struct [[=krrs::reflect_trait]] option_5
+{
+    [[=krrs::v::range{100, 200}]] int calendar_id;
+    [[=krrs::v::contains{"by_books", "latest_changes_for_books"}]] std::string_view endpoint;
+};
+
 } // namespace mocks
 
 namespace tests {
@@ -129,6 +136,46 @@ TEST(test_argparse, test_help)
 
         std::cout << std::format("{}\n", result.error());
     }
+}
+
+TEST(test_argparse, test_validate)
+{
+    const auto expect_parse_exception = [] <typename T, std::size_t N> (const char* (&argv)[N],
+                                                                        std::string_view expected_str,
+                                                                        std::source_location where = std::source_location::current()) {
+        const std::string line_loc = std::format("{}:{}", where.file_name(), where.line());
+        bool has_exception = false;
+        try
+        {
+            auto _ = krrs::argparse::parse_args<T>(std::ranges::size(argv), argv);
+        }
+        catch (const std::invalid_argument& e)
+        {
+            has_exception = true;
+            const std::string e_str{e.what()};
+            EXPECT_EQ(expected_str, e_str) << std::format("Failed at: {}", line_loc);
+        }
+        EXPECT_TRUE(has_exception) << std::format("Failed at: {}", line_loc);
+    };
+
+    // calendar_id within [100, 200] and endpoint in the allowed list -> passes validation
+    const char* argv_ok[] = {"dummy_exe", "--calendar_id", "150", "--endpoint", "by_books"};
+    const auto result = krrs::argparse::parse_args<mocks::option_5>(std::ranges::size(argv_ok), argv_ok);
+    ASSERT_TRUE(result.has_value()) << "unexpected validation error!";
+    EXPECT_EQ(result->calendar_id, 150);
+    EXPECT_EQ(result->endpoint, "by_books");
+
+    // calendar_id below the inclusive lower bound
+    const char* argv_below[] = {"dummy_exe", "--calendar_id", "50", "--endpoint", "by_books"};
+    expect_parse_exception.template operator()<mocks::option_5>(argv_below, "50 is not within the range of [100, 200]");
+
+    // calendar_id above the inclusive upper bound
+    const char* argv_above[] = {"dummy_exe", "--calendar_id", "500", "--endpoint", "by_books"};
+    expect_parse_exception.template operator()<mocks::option_5>(argv_above, "500 is not within the range of [100, 200]");
+
+    // endpoint not present in the allowed list
+    const char* argv_contains[] = {"dummy_exe", "--calendar_id", "150", "--endpoint", "by_cds"};
+    expect_parse_exception.template operator()<mocks::option_5>(argv_contains, R"(by_cds is not within expected list: ["by_books", "latest_changes_for_books"])");
 }
 
 } // namespace tests
