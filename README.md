@@ -213,8 +213,6 @@ krrs::argparse::parse_args<options>(1, argv);
 
 ---
 
-## Building & Testing   _(next — GCC 16.1, `-freflection`, `-std=gnu++26`)_
-
 ## License
 
 MIT © KiryuRS

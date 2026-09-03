@@ -33,8 +33,6 @@ struct [[=krrs::reflect_trait]] option_3
     [[=krrs::shortform_trait]] std::vector<int> data_points;
     [[=krrs::shortform_trait]] std::unordered_set<std::string> metric_names;
     std::array<double, 10> buckets;
-
-    constexpr auto operator<=>(const option_3&) const noexcept = default;
 };
 
 struct [[=krrs::reflect_trait]] option_4
@@ -50,6 +48,14 @@ struct [[=krrs::reflect_trait]] option_5
 {
     [[=krrs::v::range{100, 200}]] int calendar_id;
     [[=krrs::v::contains{"by_books", "latest_changes_for_books"}]] std::string_view endpoint;
+};
+
+// inherited options
+struct [[=krrs::reflect_trait]] option_6 : option_1
+{
+    std::string allowed_user;
+
+    constexpr auto operator<=>(const option_6&) const noexcept = default;
 };
 
 } // namespace mocks
@@ -77,6 +83,11 @@ TEST(test_argparse, test_simple)
     const char* argv_2[] = {"dummy_exe"};
     const mocks::option_2 expected_2{.workers = 4, .port = 8080, .epsilon_value = 1e-5};
     expect_parse_success(argv_2, expected_2);
+
+    // inherited UDT should account for all variables
+    const char* argv_6[] = {"dummy_exe", "--number_of_threads", "8", "-f", "/opt/sp/gcc/16.2", "--allowed_user", "Obama"};
+    const mocks::option_6 expected_6{{8, "/opt/sp/gcc/16.2", "http://localhost:8500"}, "Obama"};
+    expect_parse_success(argv_6, expected_6);
 }
 
 TEST(test_argparse, test_failure_scenarios)
