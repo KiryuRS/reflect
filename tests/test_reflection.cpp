@@ -22,6 +22,7 @@ struct [[=krrs::reflect_trait]] with_traits
     int id;
     const char* name;
     double price;
+    uint8_t delay;
 
     constexpr auto operator<=>(const with_traits&) const noexcept = default;
 };
@@ -110,20 +111,20 @@ TEST(test_reflection, test_ostream)
     mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
     expect_same_printable(e, "PRICE_MINS_15_DELAY");
 
-    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
-    expect_same_printable(object, "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
+    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346, .delay = 10};
+    expect_same_printable(object, "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346, delay: 10}");
 
-    const mocks::derived d_object{{102, "TSLA.OQ", 0.000145}, "invalid"};
-    expect_same_printable(d_object, "derived{id: 102, name: TSLA.OQ, price: 0.000145, trade_id: invalid}");
+    const mocks::derived d_object{{102, "TSLA.OQ", 0.000145, 100}, "invalid"};
+    expect_same_printable(d_object, "derived{id: 102, name: TSLA.OQ, price: 0.000145, delay: 100, trade_id: invalid}");
 
     const mocks::aliasing a_object{d_object};
-    expect_same_printable(a_object, "aliasing{id: 102, name: TSLA.OQ, price: 0.000145}");
+    expect_same_printable(a_object, "aliasing{id: 102, name: TSLA.OQ, price: 0.000145, delay: 100}");
 }
 
 TEST(test_reflection, test_format)
 {
-    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346};
-    EXPECT_EQ(std::format("{}", object), "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346}");
+    constexpr mocks::with_traits object{.id = 101, .name = "AAPL.OQ", .price = 0.0162346, .delay = 255};
+    EXPECT_EQ(std::format("{}", object), "with_traits{id: 101, name: AAPL.OQ, price: 0.0162346, delay: 255}");
 
     mocks::enum_with_traits e = mocks::enum_with_traits::PRICE_MINS_15_DELAY;
     EXPECT_EQ(std::format("{}", e), "PRICE_MINS_15_DELAY");

@@ -72,7 +72,24 @@ inline constexpr std::string to_string(const T& object)
         oss << std::meta::identifier_of(^^T) << '{';
         template for (constexpr auto meta : all_nsdms)
         {
-            oss << std::exchange(delimiter, ", ") << std::meta::identifier_of(meta) << ": " << object.[:meta:];
+            oss << std::exchange(delimiter, ", ") << std::meta::identifier_of(meta) << ": ";
+
+            using member_type = [:std::meta::type_of(meta):];
+            using raw_member_type = std::remove_cvref_t<member_type>;
+
+            // single byte implicitly converts to "char". should not be the expected behavior
+            if constexpr (std::same_as<raw_member_type, uint8_t>)
+            {
+                oss << static_cast<uint16_t>(object.[:meta:]);
+            }
+            else if constexpr (std::same_as<raw_member_type, int8_t>)
+            {
+                oss << static_cast<int16_t>(object.[:meta:]);
+            }
+            else
+            {
+                oss << object.[:meta:];
+            }
         }
         oss << '}';
         return oss.str();
