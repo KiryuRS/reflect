@@ -78,13 +78,9 @@ inline constexpr std::string to_string(const T& object)
             using raw_member_type = std::remove_cvref_t<member_type>;
 
             // single byte implicitly converts to "char". should not be the expected behavior
-            if constexpr (std::same_as<raw_member_type, uint8_t>)
+            if constexpr (std::same_as<raw_member_type, uint8_t> || std::same_as<raw_member_type, int8_t>)
             {
-                oss << static_cast<uint16_t>(object.[:meta:]);
-            }
-            else if constexpr (std::same_as<raw_member_type, int8_t>)
-            {
-                oss << static_cast<int16_t>(object.[:meta:]);
+                oss << +object.[:meta:];
             }
             else
             {
