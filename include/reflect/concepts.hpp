@@ -30,18 +30,13 @@ concept has_reflect_tag = [] {
 }();
 
 template <typename T>
-concept enumerable = requires {
-    std::is_enum_v<T>;
+concept enumerable = std::is_enum_v<T> && requires {
     std::meta::is_enumerator(^^T);
     { T::NONE } -> std::same_as<T>;
 };
 
 template <typename T>
-concept reflectable = requires {
-    std::is_class_v<T>;
-    !std::is_reflection_v<T>;
-    std::is_aggregate_v<T>;
-};
+concept reflectable = std::is_class_v<T> && !std::is_reflection_v<T> && !std::is_enum_v<T>;
 
 template <typename T>
 concept krrs_reflectable = reflectable<T> && has_reflect_tag<T>;
