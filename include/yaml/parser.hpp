@@ -22,7 +22,7 @@ T deserialize(const auto& str)
         }
         else
         {
-            static_assert(requires { std::integral_constant<bool, false>::value; }, "type not supported!");
+            static_assert(requires { requires std::integral_constant<bool, false>::value; }, "type not supported!");
         }
     };
 
