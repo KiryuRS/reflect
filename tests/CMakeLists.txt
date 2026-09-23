@@ -58,6 +58,7 @@ function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
 endfunction()
 
 add_unit_test(test_argparse)
+add_unit_test(test_functions)
 add_unit_test(test_json_parser)
 add_unit_test(test_reflection)
 add_unit_test(test_yaml_parser)
