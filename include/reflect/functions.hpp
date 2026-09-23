@@ -22,18 +22,32 @@ consteval auto retrieve_all_operator_functions()
     return std::define_static_array(std::vector<std::meta::info>{std::from_range, op_funcs_view});
 }
 
-template <std::meta::info T>
-consteval bool is_class_type() noexcept
+consteval bool is_class_type(std::meta::info m) noexcept
 {
     try
     {
-        return std::meta::is_class_type(T);
+        return std::meta::is_class_type(m);
     }
     catch (const std::meta::exception&)
     {
 
     }
     return false;
+}
+
+consteval bool is_closure_like(std::meta::info m)
+{
+    // closure type (e.g. lambdas) is unnamed, hence std::meta::parent_of() reflects an unnamed class.
+    // whereas a named functor (e.g. struct S { void operator()(); }) reflects a named class.
+    //
+    // this function is triggered whenever something is an operator function, which includes the following:
+    //
+    // struct V { int v; };
+    // bool operator+(V, V);  <-- NOTE: std::meta::has_identifier() would return false!
+    //
+    // so we need to ensure that the function exists inside a class
+    const auto parent_type = std::meta::parent_of(m);
+    return std::meta::is_class_member(m) && !std::meta::has_identifier(parent_type);
 }
 
 template <std::meta::info Meta>
@@ -84,9 +98,7 @@ consteval auto generate_function_meta()
     // normalize "signature_type" so that slice operator is only required to access the type
     if constexpr (std::meta::is_operator_function(Func))
     {
-        // additionally check if its a lambda (NOTE: only tested in GCC 16.2!)
-        constexpr auto dealiased_type = std::meta::dealias(Func);
-        constexpr bool is_lambda = std::meta::display_string_of(dealiased_type).contains("lambda");
+        constexpr bool is_lambda = detail::is_closure_like(Func);
         return function_traits{.signature_type = std::meta::type_of(Func),
                                 .return_type = std::meta::return_type_of(Func),
                                 .parameters = parameters,
@@ -126,9 +138,7 @@ consteval auto generate_function_meta()
 
     if constexpr (std::meta::is_operator_function_template(Func))
     {
-        // additionally check if its a lambda (NOTE: only tested in GCC 16.2!)
-        constexpr auto dealiased_type = std::meta::dealias(Func);
-        constexpr bool is_lambda = std::meta::display_string_of(dealiased_type).contains("lambda");
+        constexpr bool is_lambda = detail::is_closure_like(Func);
 
         constexpr auto instantiated = std::meta::substitute(Func, {^^TmplArgs...});
         const auto fn_traits = generate_function_meta<instantiated>();
@@ -167,7 +177,7 @@ consteval auto generate_function_meta()
 // pass in the entire class and extract out the operator() function from the compiler.
 // NOTE: trade-off here is that there can only be ONE operator()
 template <std::meta::info T, typename ... TmplArgs>
-    requires (detail::is_class_type<T>())
+    requires (detail::is_class_type(T))
 consteval auto generate_function_meta()
 {
     static constexpr auto operator_functions = detail::retrieve_all_operator_functions<T>();
