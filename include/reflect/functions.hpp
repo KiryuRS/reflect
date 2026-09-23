@@ -59,13 +59,20 @@ template <std::meta::info Func>
     requires detail::same_as_function<Func>
 consteval auto generate_function_meta()
 {
-    struct function_traits
+    // well, you could create a regular struct here, but showing the alternative approach
+    struct function_traits;
+    consteval
     {
-        std::meta::info signature_type;
-        std::meta::info return_type;
-        std::span<const std::meta::info> parameters;
-        function_type type;
-    };
+        std::meta::info members[]
+        {
+            std::meta::data_member_spec(^^std::meta::info, {.name = "signature_type"}),
+            std::meta::data_member_spec(^^std::meta::info, {.name = "return_type"}),
+            std::meta::data_member_spec(^^std::span<const std::meta::info>, {.name = "parameters"}),
+            std::meta::data_member_spec(^^function_type, {.name = "type"}),
+        };
+
+        std::meta::define_aggregate(^^function_traits, members);
+    }
 
     constexpr auto parameters = std::define_static_array(
         std::meta::parameters_of(Func)
@@ -102,14 +109,20 @@ consteval auto generate_function_meta()
 {
     static_assert(std::meta::can_substitute(Func, {^^TmplArgs...}), "Wrong number of template arguments supplied!");
 
-    struct function_traits
+    struct function_traits;
+    consteval
     {
-        std::meta::info signature_type;
-        std::meta::info return_type;
-        std::span<const std::meta::info> parameters;
-        std::span<const std::meta::info> template_parameters;
-        function_type type;
-    };
+        std::meta::info members[]
+        {
+            std::meta::data_member_spec(^^std::meta::info, {.name = "signature_type"}),
+            std::meta::data_member_spec(^^std::meta::info, {.name = "return_type"}),
+            std::meta::data_member_spec(^^std::span<const std::meta::info>, {.name = "parameters"}),
+            std::meta::data_member_spec(^^std::span<const std::meta::info>, {.name = "template_parameters"}),
+            std::meta::data_member_spec(^^function_type, {.name = "type"}),
+        };
+
+        std::meta::define_aggregate(^^function_traits, members);
+    }
 
     if constexpr (std::meta::is_operator_function_template(Func))
     {
