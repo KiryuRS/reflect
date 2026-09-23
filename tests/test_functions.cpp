@@ -7,7 +7,7 @@
 
 namespace mocks {
 
-int combine(int a, double b, char c);
+int combine(int, double, char);
 
 struct vec2
 {
@@ -15,20 +15,20 @@ struct vec2
     int y;
 };
 
-vec2 operator+(const vec2& lhs, const vec2& rhs);
+vec2 operator+(const vec2&, const vec2&);
 
 struct incrementer
 {
-    int operator()(int value) const;
+    int operator()(int) const;
 };
 
 template <typename T>
-T identity(T value);
+T identity(T);
 
 struct template_scaler
 {
     template <typename T, typename U>
-    T operator()(T value, U factor) const;
+    T operator()(T, U) const;
 };
 
 } // namespace mocks
