@@ -46,8 +46,8 @@ consteval bool is_closure_like(std::meta::info m)
     // bool operator+(V, V);  <-- NOTE: std::meta::has_identifier() would return false!
     //
     // so we need to ensure that the function exists inside a class
-    const auto parent_type = std::meta::parent_of(m);
-    return std::meta::is_class_member(m) && !std::meta::has_identifier(parent_type);
+    const auto parent = std::meta::parent_of(m);
+    return std::meta::is_class_member(m) && !std::meta::has_identifier(parent);
 }
 
 template <std::meta::info Meta>
