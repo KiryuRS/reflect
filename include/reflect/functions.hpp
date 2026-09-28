@@ -68,6 +68,18 @@ enum class function_type
     LAMBDA_FUNCTION_TEMPLATE,
 };
 
+static constexpr std::array non_template_function_types = {
+    function_type::FUNCTION,
+    function_type::OPERATOR_FUNCTION,
+    function_type::LAMBDA_FUNCTION
+};
+
+static constexpr std::array template_function_types = {
+    function_type::FUNCTION_TEMPLATE,
+    function_type::OPERATOR_FUNCTION_TEMPLATE,
+    function_type::LAMBDA_FUNCTION_TEMPLATE,
+};
+
 // non-template functions
 template <std::meta::info Func, typename ...>
     requires detail::same_as_function<Func>
