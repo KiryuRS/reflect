@@ -69,7 +69,7 @@ enum class function_type
 };
 
 // non-template functions
-template <std::meta::info Func>
+template <std::meta::info Func, typename ...>
     requires detail::same_as_function<Func>
 consteval auto generate_function_meta()
 {
