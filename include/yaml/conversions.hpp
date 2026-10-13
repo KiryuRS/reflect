@@ -81,6 +81,28 @@ struct convert<std::optional<T>>
 };
 
 template <typename T>
+    requires ::krrs::reflect::concepts::enumerable<T>
+struct convert<T>
+{
+    static Node encode(const T& obj)
+    {
+        Node node{NodeType::Scalar};
+        node = ::krrs::reflect::enum_to_string(obj);
+        return node;
+    }
+
+    static bool decode(const Node& node, T& obj)
+    {
+        if (!node.IsScalar())
+            return false;
+
+        const std::string str = node.template as<std::string>();
+        obj = ::krrs::reflect::string_to_enum<T>(str);
+        return true;
+    }
+};
+
+template <typename T>
     requires ::krrs::reflect::concepts::reflectable<T> && ::krrs::reflect::concepts::has_reflect_tag<T>
 struct convert<T>
 {
@@ -92,16 +114,7 @@ struct convert<T>
         template for (constexpr auto member : members)
         {
             constexpr std::string_view name = std::meta::identifier_of(member);
-            using type = [:std::meta::type_of(member):];
-
-            if constexpr (::krrs::reflect::concepts::enumerable<type>)
-            {
-                node[name] = ::krrs::reflect::enum_to_string(obj.[:member:]);
-            }
-            else
-            {
-                node[name] = obj.[:member:];
-            }
+            node[name] = obj.[:member:];
         }
         return node;
     }
@@ -128,15 +141,7 @@ struct convert<T>
 
             if (node[name].IsDefined())
             {
-                if constexpr (::krrs::reflect::concepts::enumerable<type>)
-                {
-                    const std::string str = node[name].template as<std::string>();
-                    obj.[:member:] = ::krrs::reflect::string_to_enum<type>(str);
-                }
-                else
-                {
-                    obj.[:member:] = node[name].template as<type>();
-                }
+                obj.[:member:] = node[name].template as<type>();
             }
             else
             {

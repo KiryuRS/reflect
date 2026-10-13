@@ -7,6 +7,7 @@
 
 #include <ranges>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace mocks {
@@ -36,6 +37,7 @@ struct [[=krrs::reflect_trait]] config_2
     std::vector<double> override_prices = {};
     std::string application_name = "default-hello-world";
     float epsilon_value = 1e-5f;
+    std::unordered_map<std::string, mocks::region> host_regions = {};
 
     constexpr auto operator<=>(const config_2&) const = default;
 };
@@ -89,6 +91,25 @@ config_3:
     const auto obj = krrs::yaml::deserialize<mocks::config_3>(str);
     const mocks::config_3 expected{.workers = std::nullopt, .override_path = "/usr/lib/local"};
     EXPECT_EQ(obj, expected);
+}
+
+TEST(test_yaml_parser, test_unordered_map_with_enum_mapped_type)
+{
+    const std::string str = R"(
+config_2:
+    host_regions:
+        sgzls1216d: APAC
+        ldnzls0042p: EMEA
+        nyczls0007p: AMER
+)";
+    const auto obj = krrs::yaml::deserialize<mocks::config_2>(str);
+    const mocks::config_2 expected{
+        .host_regions = {{"sgzls1216d", mocks::region::APAC}, {"ldnzls0042p", mocks::region::EMEA}, {"nyczls0007p", mocks::region::AMER}}};
+    EXPECT_EQ(obj, expected);
+
+    // iteration order is unspecified, so verify encode via a round trip
+    const auto round_trip = krrs::yaml::deserialize<mocks::config_2>(krrs::yaml::serialize(expected));
+    EXPECT_EQ(round_trip, expected);
 }
 
 TEST(test_yaml_parser, test_decode_has_missing_keys)
