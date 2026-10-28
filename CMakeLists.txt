@@ -1,3 +1,6 @@
+# Copyright (c) 2026 KiryuRS
+# SPDX-License-Identifier: MIT
+
 cmake_minimum_required(VERSION 4.1)
 
 project(meta-reflection

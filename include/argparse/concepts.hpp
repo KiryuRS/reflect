@@ -1,43 +1,73 @@
-// Copyright (c) 2025 KiryuRS
+// Copyright (c) 2026 KiryuRS
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include <concepts>
-#include <optional>
-#include <type_traits>
-#include <vector>
+#include "../reflect/reflect.hpp"
 
-namespace krrs::argparse::concepts {
+#include <filesystem>
+#include <set>
+#include <unordered_set>
+
+namespace krrs {
 
 namespace detail {
 
-template <typename T>
-struct same_as_vector : std::false_type
-{
-};
-
-template <typename... Ts>
-struct same_as_vector<std::vector<Ts...>> : std::true_type
-{
-};
-
-template <typename T>
-struct is_optional : std::false_type
-{
-};
-
-template <typename... Args>
-struct is_optional<std::optional<Args...>> : std::true_type
+struct short_tag
 {
 };
 
 } // namespace detail
 
+// short-form trait to represent single letter. e.g. --filepath will additionally produce -f
+inline constexpr detail::short_tag shortform_trait{};
+
+namespace argparse::concepts {
+
+namespace detail {
+
+// limitation to only allow specific types for parsing
 template <typename T>
-concept same_as_vector = detail::same_as_vector<T>::value;
+consteval bool validate_option_types()
+{
+    static constexpr auto members = reflect::generate_nonstatic_member_metas<T>();
+    std::array<bool, std::ranges::size(members)> valid_options;
+    std::size_t i = 0;
+
+    template for (constexpr auto member : members)
+    {
+        constexpr auto type_info = std::meta::type_of(member);
+        using type = [:type_info:];
+        const bool supported_types =
+            std::integral<type> || std::floating_point<type> // built-in types
+            || std::same_as<type, std::string> || std::same_as<type, std::string_view> // string types
+            || std::same_as<type, std::filesystem::path> // filesystem::path type
+            || reflect::instance_of<type, ^^std::vector> || reflect::instance_of<type, ^^std::unordered_set> || reflect::instance_of<type, ^^std::set> // homogeneous dynamic-sized container types
+            || reflect::instance_of<type, ^^std::array> // homogeneous fixed-sized container type
+        ;
+        valid_options[i++] = supported_types;
+    }
+    return std::ranges::all_of(valid_options, std::identity{});
+}
+
+template <std::meta::info Meta, std::meta::info Trait>
+consteval bool has_annotated_trait()
+{
+    static constexpr auto annotations = std::define_static_array(std::meta::annotations_of(Meta));
+    return std::ranges::any_of(annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(Trait); });
+}
+
+} // namespace detail
 
 template <typename T>
-concept same_as_optional = detail::is_optional<std::remove_cvref_t<T>>::value;
+concept type_parsable = requires {
+    detail::validate_option_types<T>();
+    requires reflect::concepts::krrs_reflectable<T>;
+};
 
-} // namespace krrs::argparse::concepts
+template <std::meta::info Meta>
+concept shortform_trait = detail::has_annotated_trait<Meta, ^^shortform_trait>();
+
+} // namespace argparse::concepts
+
+} // namespace krrs

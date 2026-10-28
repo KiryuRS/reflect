@@ -1,5 +1,5 @@
-# packages
-
+# Copyright (c) 2026 KiryuRS
+# SPDX-License-Identifier: MIT
 
 enable_testing()
 find_package(GTest REQUIRED)
@@ -11,8 +11,8 @@ function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
     set_target_properties(${TEST_FILENAME_WITHOUT_CPP}
         PROPERTIES
             CXX_STANDARD_REQUIRED       ON
-            CXX_STANDARD                23
-            CXX_EXTENSIONS              OFF
+            CXX_STANDARD                26
+            CXX_EXTENSIONS              ON
             LINKER_LANGUAGE             CXX
     )
 
@@ -34,9 +34,10 @@ function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
             -fstrict-aliasing
             -fdiagnostics-color=always
             -fconcepts-diagnostics-depth=5
+            -freflection
     )
 
-        # optimization flags
+    # optimization flags
     target_compile_options(${TEST_FILENAME_WITHOUT_CPP}
         PRIVATE
             $<$<CONFIG:Debug>:-O0 -ggdb>
@@ -57,7 +58,8 @@ function(add_unit_test TEST_FILENAME_WITHOUT_CPP)
 endfunction()
 
 add_unit_test(test_argparse)
-add_unit_test(test_json_serialization)
-add_unit_test(test_reflection_core)
-add_unit_test(test_reflection_extended)
-add_unit_test(test_yaml_conversion)
+add_unit_test(test_functions)
+add_unit_test(test_inteoc)
+add_unit_test(test_json_parser)
+add_unit_test(test_reflection)
+add_unit_test(test_yaml_parser)

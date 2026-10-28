@@ -1,84 +1,46 @@
-// Copyright (c) 2025 KiryuRS
+// Copyright (c) 2026 KiryuRS
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include <array>
-#include <concepts>
-#include <cstddef>
-#include <string_view>
-#include <type_traits>
+#include <algorithm>
+#include <meta>
 
-namespace krrs::reflect::concepts {
+namespace krrs {
 
 namespace detail {
 
-template <typename T>
-struct is_array_type : std::false_type
+struct reflect_tag
 {
-};
-
-template <typename T, size_t N>
-struct is_array_type<std::array<T, N>> : std::true_type
-{
-};
-
-template <typename>
-struct member_class;
-
-template <typename Class, typename T>
-struct member_class<T Class::*>
-{
-    using type = Class;
 };
 
 } // namespace detail
 
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept same_as_array_type = detail::is_array_type<RawT>::value;
+// for annotating a struct. e.g.
+// struct [[=krrs::reflect_trait]] my_type { ... };
+// not a good place for this variable. but it will do for now ...
+inline constexpr detail::reflect_tag reflect_trait{};
 
-template <typename T, auto MemberPtr>
-concept member_of = std::same_as<T, typename detail::member_class<decltype(MemberPtr)>::type>;
+namespace reflect::concepts {
 
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept stringable = std::same_as<RawT, std::string_view> || std::same_as<std::string, RawT> || std::same_as<const char*, RawT>;
+template <typename T>
+concept has_reflect_tag = [] {
+    constexpr auto all_annotations = std::define_static_array(std::meta::annotations_of(^^T));
+    return std::ranges::any_of(all_annotations, [](std::meta::info meta) { return std::meta::type_of(meta) == std::meta::type_of(^^reflect_trait); });
+}();
 
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept enumerable = requires {
-    requires std::is_enum_v<RawT>;
-    { RawT::NONE } -> std::same_as<RawT>;
+template <typename T>
+concept enumerable = std::is_enum_v<T> && requires {
+    std::meta::is_enumerator(^^T);
+    { T::NONE } -> std::same_as<T>;
 };
 
-template <typename Functor, typename ArgT>
-concept template_only_invocable = requires { std::declval<Functor>().template operator()<ArgT>(); };
+template <typename T>
+concept reflectable = std::is_class_v<T> && !std::is_reflection_v<T> && !std::is_enum_v<T>;
 
-template <typename Functor, typename ArgT>
-concept template_invocable = requires { std::declval<Functor>().template operator()<ArgT>(ArgT{}); };
+template <typename T>
+concept krrs_reflectable = reflectable<T> && has_reflect_tag<T>;
 
-template <typename Functor, typename T>
-concept any_invocable = template_only_invocable<Functor, T> || template_invocable<Functor, T> || std::invocable<Functor, T>;
+} // namespace concepts::reflect
 
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept descriptor_like = requires {
-    typename RawT::introspection_type;
-    typename RawT::class_type;
-    typename RawT::member_type;
-    typename RawT::member_pointer_type;
-    requires std::same_as<decltype(RawT::name), const std::string_view>;
-    requires std::same_as<decltype(RawT::mem_type_str), const std::string_view>;
-    requires std::same_as<decltype(RawT::mem_ptr), const typename T::member_pointer_type>;
-};
-
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept reflectable = requires {
-    { RawT::meta_info_array_as_id() } -> std::same_as<void (*)()>; // did you forget to use REFLECT / REFLECT_PRINTABLE macro?
-};
-
-template <typename T, typename RawT = std::remove_cvref_t<T>>
-concept reflect_and_printable = requires {
-    requires reflectable<RawT>;
-    { to_string(std::declval<RawT>()) } -> std::same_as<std::string>;  // did you forget to use REFLECT_PRINTABLE macro?
-    { print_meta(std::declval<RawT>()) } -> std::same_as<std::string>; // did you forget to use REFLECT_PRINTABLE macro?
-};
-
-} // namespace krrs::reflect::concepts
+} // namespace krrs
