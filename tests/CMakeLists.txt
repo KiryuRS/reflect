@@ -59,6 +59,7 @@ endfunction()
 
 add_unit_test(test_argparse)
 add_unit_test(test_functions)
+add_unit_test(test_inteoc)
 add_unit_test(test_json_parser)
 add_unit_test(test_reflection)
 add_unit_test(test_yaml_parser)
