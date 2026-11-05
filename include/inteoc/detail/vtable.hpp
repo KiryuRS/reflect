@@ -25,16 +25,16 @@ struct descriptor_base
     void bind(T& obj) noexcept
     {
         object = &obj;
-        thunk = [](Object* self, Args&& ... args) noexcept(NoExcept) -> R {
+        thunk = [](Object* self, Args ... args) noexcept(NoExcept) -> R {
             using self_type = std::conditional_t<is_const, const T, T>;
             constexpr auto func = find_matching_function<std::remove_const_t<T>>(Function);
-            return static_cast<self_type*>(self)->[:func:](std::forward<Args>(args)...);
+            return static_cast<self_type*>(self)->[:func:](args...);
         };
     }
 
     R operator()(Args... args) const noexcept(NoExcept)
     {
-        return thunk(object, std::forward<Args>(args)...);
+        return thunk(object, args...);
     }
 };
 
